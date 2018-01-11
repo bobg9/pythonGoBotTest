@@ -1,14 +1,9 @@
-
 import copy
 
 from dlgo.gotypes import Player
 
 
-class Move(object):
-    """Any action a player can play on a turn.
-
-    Exactly one of is_play, is_pass, is_resign will be set.
-    """
+class Move:
     def __init__(self, point=None, is_pass=False, is_resign=False):
         assert (point is not None) ^ is_pass ^ is_resign
         self.point = point
@@ -18,7 +13,6 @@ class Move(object):
 
     @classmethod
     def play(cls, point):
-        """A move that places a stone on the board."""
         return Move(point=point)
 
     @classmethod
@@ -30,10 +24,7 @@ class Move(object):
         return Move(is_resign=True)
 
 
-class GoString(object):
-    """Stones that are linked by a chain of connected stones of the
-    same color.
-    """
+class GoString:
     def __init__(self, color, stones, liberties):
         self.color = color
         self.stones = set(stones)
@@ -45,14 +36,13 @@ class GoString(object):
     def add_liberty(self, point):
         self.liberties.add(point)
 
-    def merged_with(self, string):
-        """Return a new string containing all stones in both strings."""
-        assert string.color == self.color
-        combined_stones = self.stones | string.stones
+    def merged_with(self, go_string):
+        assert go_string.color == self.color
+        combined_stones = self.stones | go_string.stones
         return GoString(
             self.color,
             combined_stones,
-            (self.liberties | string.liberties) - combined_stones)
+            (self.liberties | go_string.liberties) - combined_stones)
 
     @property
     def num_liberties(self):
@@ -65,7 +55,7 @@ class GoString(object):
                self.liberties == other.liberties
 
 
-class Board(object):
+class Board:
     def __init__(self, num_rows, num_cols):
         self.num_rows = num_rows
         self.num_cols = num_cols
@@ -74,7 +64,6 @@ class Board(object):
     def place_stone(self, player, point):
         assert self.is_on_grid(point)
         assert self._grid.get(point) is None
-        # 0. Examine the adjacent points.
         adjacent_same_color = []
         adjacent_opposite_color = []
         liberties = []
@@ -91,24 +80,34 @@ class Board(object):
                 if neighbor_string not in adjacent_opposite_color:
                     adjacent_opposite_color.append(neighbor_string)
         new_string = GoString(player, [point], liberties)
-        # 1. Merge any adjacent strings of the same color.
         for same_color_string in adjacent_same_color:
             new_string = new_string.merged_with(same_color_string)
         for new_string_point in new_string.stones:
             self._grid[new_string_point] = new_string
-        # 2. Reduce liberties of any adjacent strings of the opposite
-        #    color.
         for other_color_string in adjacent_opposite_color:
             other_color_string.remove_liberty(point)
-        # 3. If any opposite color strings now have zero liberties,
-        #    remove them.
         for other_color_string in adjacent_opposite_color:
             if other_color_string.num_liberties == 0:
                 self._remove_string(other_color_string)
 
+    def is_on_grid(self, point):
+        return 1 <= point.row <= self.num_rows and \
+               1 <= point.col <= self.num_cols
+
+    def get(self, point):
+        string = self._grid.get(point)
+        if string is None:
+            return None
+        return string.color
+
+    def get_go_string(self, point):
+        string = self._grid.get(point)
+        if string is None:
+            return None
+        return string
+
     def _remove_string(self, string):
         for point in string.stones:
-            # Removing a string can create liberties for other strings.
             for neighbor in point.neighbors():
                 neighbor_string = self._grid.get(neighbor)
                 if neighbor_string is None:
@@ -117,34 +116,8 @@ class Board(object):
                     neighbor_string.add_liberty(point)
             self._grid[point] = None
 
-    def is_on_grid(self, point):
-        return 1 <= point.row <= self.num_rows and \
-               1 <= point.col <= self.num_cols
 
-    def get(self, point):
-        """Return the content of a point on the board.
-
-        Returns None if the point is empty, or a Player if there is a
-        stone on that point.
-        """
-        string = self._grid.get(point)
-        if string is None:
-            return None
-        return string.color
-
-    def get_string(self, point):
-        """Return the entire string of stones at a point.
-
-        Returns None if the point is empty, or a GoString if there is
-        a stone on that point.
-        """
-        string = self._grid.get(point)
-        if string is None:
-            return None
-        return string
-
-
-class GameState(object):
+class GameState:
     def __init__(self, board, next_player, previous, move):
         self.board = board
         self.next_player = next_player
@@ -152,7 +125,6 @@ class GameState(object):
         self.last_move = move
 
     def apply_move(self, player, move):
-        """Return the new GameState after applying the move."""
         if player != self.next_player:
             raise ValueError(player)
         if move.is_play:
@@ -184,8 +156,12 @@ class GameState(object):
             return False
         next_board = copy.deepcopy(self.board)
         next_board.place_stone(player, move.point)
-        new_string = next_board.get_string(move.point)
+        new_string = next_board.get_go_string(move.point)
         return new_string.num_liberties == 0
+
+    @property
+    def situation(self):
+        return (self.next_player, self.board)
 
     def does_move_violate_ko(self, player, move):
         if not move.is_play:
@@ -201,9 +177,11 @@ class GameState(object):
         return False
 
     def is_valid_move(self, move):
+        if self.is_over():
+            return False
         if move.is_pass or move.is_resign:
             return True
         return (
-            self.board.get(move.point) is None and
-            not self.is_move_self_capture(self.next_player, move) and
-            not self.does_move_violate_ko(self.next_player, move))
+                self.board.get(move.point) is None and
+                not self.is_move_self_capture(self.next_player, move) and
+                not self.does_move_violate_ko(self.next_player, move))
