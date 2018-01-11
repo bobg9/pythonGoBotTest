@@ -1,10 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-"""Goban made with Python, pygame and go.py.
-This is a front-end for my go library 'go.py', handling drawing and
-pygame-related activities. Together they form a fully working goban.
-"""
 import pygame
 
 
