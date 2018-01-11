@@ -1,14 +1,7 @@
-from collections import namedtuple
 
+import copy
 
-class Point(namedtuple('Point', 'row col')):
-    def neighbors(self):
-        return [
-            Point(self.row - 1, self.col),
-            Point(self.row + 1, self.col),
-            Point(self.row, self.col - 1),
-            Point(self.row, self.col + 1),
-        ]
+from dlgo.gotypes import Player
 
 
 class Move(object):
@@ -113,6 +106,17 @@ class Board(object):
             if other_color_string.num_liberties == 0:
                 self._remove_string(other_color_string)
 
+    def _remove_string(self, string):
+        for point in string.stones:
+            # Removing a string can create liberties for other strings.
+            for neighbor in point.neighbors():
+                neighbor_string = self._grid.get(neighbor)
+                if neighbor_string is None:
+                    continue
+                if neighbor_string is not string:
+                    neighbor_string.add_liberty(point)
+            self._grid[point] = None
+
     def is_on_grid(self, point):
         return 1 <= point.row <= self.num_rows and \
                1 <= point.col <= self.num_cols
@@ -138,3 +142,68 @@ class Board(object):
         if string is None:
             return None
         return string
+
+
+class GameState(object):
+    def __init__(self, board, next_player, previous, move):
+        self.board = board
+        self.next_player = next_player
+        self.previous_state = previous
+        self.last_move = move
+
+    def apply_move(self, player, move):
+        """Return the new GameState after applying the move."""
+        if player != self.next_player:
+            raise ValueError(player)
+        if move.is_play:
+            next_board = copy.deepcopy(self.board)
+            next_board.place_stone(player, move.point)
+        else:
+            next_board = self.board
+        return GameState(next_board, player.other, self, move)
+
+    @classmethod
+    def new_game(cls, board_size):
+        if isinstance(board_size, int):
+            board_size = (board_size, board_size)
+        board = Board(*board_size)
+        return GameState(board, Player.black, None, None)
+
+    def is_over(self):
+        if self.last_move is None:
+            return False
+        if self.last_move.is_resign:
+            return True
+        second_last_move = self.previous_state.last_move
+        if second_last_move is None:
+            return False
+        return self.last_move.is_pass and second_last_move.is_pass
+
+    def is_move_self_capture(self, player, move):
+        if not move.is_play:
+            return False
+        next_board = copy.deepcopy(self.board)
+        next_board.place_stone(player, move.point)
+        new_string = next_board.get_string(move.point)
+        return new_string.num_liberties == 0
+
+    def does_move_violate_ko(self, player, move):
+        if not move.is_play:
+            return False
+        next_board = copy.deepcopy(self.board)
+        next_board.place_stone(player, move.point)
+        next_situation = (player.other, next_board)
+        past_state = self.previous_state
+        while past_state is not None:
+            if past_state.situation == next_situation:
+                return True
+            past_state = past_state.previous_state
+        return False
+
+    def is_valid_move(self, move):
+        if move.is_pass or move.is_resign:
+            return True
+        return (
+            self.board.get(move.point) is None and
+            not self.is_move_self_capture(self.next_player, move) and
+            not self.does_move_violate_ko(self.next_player, move))
