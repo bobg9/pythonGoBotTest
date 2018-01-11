@@ -7,13 +7,8 @@ pygame-related activities. Together they form a fully working goban.
 """
 import pygame
 
-from dlgo.goboard import Board
+
 from dlgo.gotypes import Point, Player
-
-__author__ = "Aku Kotkavuo <aku@hibana.net>"
-__version__ = "0.1"
-
-from sys import exit
 
 BACKGROUND = 'images/ramin.jpg'
 
@@ -41,11 +36,6 @@ class GuiBoard():
 
         # Outline is inflated here for future use as a collidebox for the mouse
         outline.inflate_ip(20, 20)
-        #pygame.draw.circle(background,BLACK,((40 * 1),(40 * 1)),15,0)
-        #pygame.draw.circle(background,BLACK,((40 * 2),(40 * 2)),15,0)
-        #pygame.draw.circle(background,BLACK,((40 * 3),(40 * 3)),15,0)
-        #pygame.draw.circle(background,BLACK,((40 * 3),(40 * 1)),15,0)
-        #pygame.draw.circle(background,WHITE,((40 * 9),(40 * 9)),15,0)
         for i in range(board.num_cols-1):
             for j in range(board.num_rows-1):
                 rect = pygame.Rect(40 + (40 * i), 40 + (40 * j), 40, 40)
@@ -61,28 +51,3 @@ class GuiBoard():
         screen.blit(background, (0, 0))
         pygame.display.update()
 
-
-'''def main():
-    while True:
-        pygame.time.wait(250)
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                exit()
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1 and board.outline.collidepoint(event.pos):
-                    x = int(round(((event.pos[0] - 5) / 40.0), 0))
-                    y = int(round(((event.pos[1] - 5 ) / 40.0), 0))
-                    stone = board.search(point=(x, y))
-                    if stone:
-                        stone.remove()
-                    else:
-                        added_stone = Stone(board, (x, y), board.turn())
-
-
-if __name__ == '__main__':
-    pygame.init()
-    pygame.display.set_caption('Goban')
-    screen = pygame.display.set_mode(BOARD_SIZE, 0, 32)
-    background = pygame.image.load(BACKGROUND).convert()
-    board = GuiBoard(9, 9)
-    main()'''
