@@ -41,9 +41,9 @@ class GuiBoard():
                 player = board.get(Point(i, j))
                 if player is not None:
                     if player == Player.black:
-                        pygame.draw.circle(background,BLACK,((40 * (j)),(40 * (10-i))),15,0)
+                        pygame.draw.circle(background,BLACK,((40 * (j)),(40 * (board.num_cols-i+1))),15,0)
                     elif player == Player.white:
-                        pygame.draw.circle(background,WHITE,((40 * (j)),(40 * (10-i))),15,0)
+                        pygame.draw.circle(background,WHITE,((40 * (j)),(40 * (board.num_cols-i+1))),15,0)
         screen.blit(background, (0, 0))
         pygame.display.update()
 

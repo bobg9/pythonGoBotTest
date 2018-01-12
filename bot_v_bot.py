@@ -4,21 +4,22 @@ import pygame
 
 from dlgo import gotypes
 from dlgo.agent.naive import RandomBot
-from dlgo.gamestate import GameState
+from dlgo.goboard_fast import GameState
 from dlgo.gui import GuiBoard
+from dlgo.minimax.alphabeta import AlphaBetaAgent
 from dlgo.scoring import compute_game_result
-from dlgo.utils import print_move, print_board
+from dlgo.utils import print_move, print_board, capture_diff
 
 
 def main():
-    board_size = 9
+    board_size = 5
     pygame.init()
     pygame.display.set_caption('Goban')
 
     game = GameState.new_game(board_size)
     bots = {
         gotypes.Player.black: RandomBot(),
-        gotypes.Player.white: RandomBot(),
+        gotypes.Player.white: AlphaBetaAgent(2, capture_diff),
     }
     while not game.is_over():
         #time.sleep(0.3)
